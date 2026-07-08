@@ -1,0 +1,57 @@
+#cloud-config
+package_update: true
+package_upgrade: false
+packages:
+  - ca-certificates
+  - curl
+  - gnupg
+
+write_files:
+  - path: /etc/gatus/config.yaml
+    permissions: "0644"
+    content: |
+      web:
+        port: 8080
+      endpoints:
+        - name: api.ipify.org - public IP
+          url: https://api.ipify.org?format=json
+          interval: 5s
+          conditions:
+            - "[STATUS] == 200"
+            - "[BODY].ip != \"\""
+          alerts: []
+
+  - path: /etc/systemd/system/gatus.service
+    permissions: "0644"
+    content: |
+      [Unit]
+      Description=Gatus monitoring dashboard
+      After=docker.service
+      Requires=docker.service
+
+      [Service]
+      Restart=always
+      ExecStartPre=-/usr/bin/docker rm -f gatus
+      ExecStart=/usr/bin/docker run --rm --name gatus \
+        -p 8080:8080 \
+        -v /etc/gatus/config.yaml:/config/config.yaml:ro \
+        -e GATUS_CONFIG_PATH=/config/config.yaml \
+        twinproduction/gatus:latest
+      ExecStop=/usr/bin/docker stop gatus
+
+      [Install]
+      WantedBy=multi-user.target
+
+runcmd:
+  - install -m 0755 -d /etc/apt/keyrings
+  - curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+  - chmod a+r /etc/apt/keyrings/docker.asc
+  - |
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" > /etc/apt/sources.list.d/docker.list
+  - apt-get update -y
+  - apt-get install -y docker-ce docker-ce-cli containerd.io
+  - systemctl enable docker
+  - systemctl start docker
+  - systemctl daemon-reload
+  - systemctl enable gatus
+  - systemctl start gatus

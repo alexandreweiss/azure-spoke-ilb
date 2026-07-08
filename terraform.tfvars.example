@@ -1,0 +1,7 @@
+aviatrix_password      = "your-controller-password"
+azure_subscription_id  = "your-azure-subscription-id"
+aviatrix_azure_account = "your-aviatrix-azure-account-name"
+region                 = "France Central"
+spoke_gw_size          = "Standard_B2s_v2"
+thirdparty_vm_admin_username = "admin-lab"
+# transit_gw_name      = "my-transit-gw"  # uncomment to attach spoke to a transit
